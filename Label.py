@@ -38,7 +38,7 @@ for i in range(0, len(zz1.index) - 2):
         while True:
             if zz2.iloc[lst + 1][0] == zz1.iloc[i + 1][0]: break
             lst += 1
-
+        print(zz2.iloc[tmp][0], zz2.iloc[lst][0], zz1.iloc[i+1][0])
         mx = 0
         mn = all['close'][zz2.iloc[tmp][0]]
         cnt = 0
@@ -47,11 +47,12 @@ for i in range(0, len(zz1.index) - 2):
             mn = min([mn, all['close'][j]])
             mx = max([mx, all['close'][j]])
 
-        if cnt < bong_cnt or mx < mn * sub_mx_mn: continue
+        if cnt < bong_cnt or mx < mn * sub_mx_mn:
+            tmp = lst + 1
+            continue
         else:
             for j in range(int(zz2.iloc[tmp][0]), int(zz2.iloc[lst][0])):
                 all['label'][j] = 1
-
         tmp = lst + 1
 
 all.to_csv("data2.csv")

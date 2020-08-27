@@ -1,253 +1,61 @@
-import talib
-import pyupbit
-import numpy as np
 import pandas as pd
-import CreateCsv
+import matplotlib.pyplot as plt
+
+all = pd.read_csv("data.csv")
+zz1 = pd.read_csv("zigzag.csv")
+zz2 = pd.read_csv("zigzag2.csv")
+
+zz1.columns = ['idx', 'oz', 'hz', 'lz', 'cz', 'vz', 'wz']
+zz2.columns = ['idx2', 'oz2', 'hz2', 'lz2', 'cz2', 'vz2', 'wz2']
 
 
-def slope(x, y, t):
-    return (y - x) / t
+label = 0 # 하락
+if zz1.iloc[0][6] == 0:
+    label = 2 # 상승
 
-df = pd.read_csv("data.csv")
+all['label'] = label
+cnt = 1
+for i in range(1, len(all.index) - 1):
+    all['label'][i] = label
+    if cnt < len(zz1.index) and i == zz1.iloc[cnt][0]:
+        cnt += 1
+        if label == 0: label = 2
+        else: label = 0
 
-va = 1.00
-High = pd.DataFrame()
-Low = pd.DataFrame()
+# all.to_csv("data2.csv")
 
-for i in range(1, len(df.index) - 1):
-    if df.iloc[i][1] > df.iloc[i-1][1]*va and df.iloc[i][1] > df.iloc[i+1][1]*va:
-        High = High.append([df.iloc[i]])
-    if df.iloc[i][2] < df.iloc[i - 1][2] * va and df.iloc[i][2] < df.iloc[i + 1][2] * va:
-        Low = Low.append([df.iloc[i]])
+bong_cnt = 18
+sub_mx_mn = 1.08
 
-High["what"] = 1
-Low["what"] = 0
+tmp = 0
+for i in range(0, len(zz1.index) - 2):
+    tmp += 1
+    label = all['label'][zz1.iloc[i][0]]
 
-all = pd.DataFrame()
-all = all.append(High)
-all = all.append(Low)
-all = all.sort_index()
-
-all_tmp = pd.DataFrame()
-zigzag1 = pd.DataFrame() #저고저고
-zigzag2 = pd.DataFrame() #고저고저
-i_tmp_max = 0
-i_tmp_low = 0
-i=-1
-
-while True:
-    i = i+1
-    if i >= len(all.index)-1: break
-    chk = 0
-    chk_wht = all.iloc[i][5]
-    i_tmp_low = i
-    i_tmp_max = i
-    if chk_wht == 0:
-        while True:
-            i = i+1
-            if i > len(all.index): break
-            if chk_wht == all.iloc[i][5]:
-                if chk == 1: break
-                elif all.iloc[i_tmp_low][2] > all.iloc[i][2]: i_tmp_low = i
-            else:
-                if chk == 0:
-                    i_tmp_max = i
-                elif all.iloc[i_tmp_max][1] < all.iloc[i][1]: i_tmp_max = i
-                chk = 1
-        all_tmp = all_tmp.append([all.iloc[i_tmp_low]])
-        all_tmp = all_tmp.append([all.iloc[i_tmp_max]])
-        i=i-1
+    if zz2.iloc[tmp][0] == zz1.iloc[i + 1][0]: continue
     else:
+        lst = tmp
         while True:
-            i = i+1
-            if i >= len(all.index): break
-            if chk_wht == all.iloc[i][5]:
-                if chk == 1: break
-                elif all.iloc[i_tmp_max][2] < all.iloc[i][2]: i_tmp_max = i
-            else:
-                if chk == 0:
-                    i_tmp_low = i
-                elif all.iloc[i_tmp_low][1] > all.iloc[i][1]: i_tmp_low = i
-                chk = 1
-        all_tmp = all_tmp.append([all.iloc[i_tmp_max]])
-        all_tmp = all_tmp.append([all.iloc[i_tmp_low]])
-        i=i-1
+            if zz2.iloc[lst + 1][0] == zz1.iloc[i + 1][0]: break
+            lst += 1
 
-#all_tmp = all_tmp.groupby(level=0).first()
+        mx = 0
+        mn = all['close'][zz2.iloc[tmp][0]]
+        cnt = 0
+        for j in range(int(zz2.iloc[tmp][0]), int(zz2.iloc[lst][0])):
+            cnt += 1
+            mn = min([mn, all['close'][j]])
+            mx = max([mx, all['close'][j]])
 
-val_per = 1.1
-
-#저고저고
-
-i = 0
-if all_tmp.iloc[0][5] == 0:
-    i = i+1
-    zigzag1 = zigzag1.append([df.iloc[0]])
-    zigzag1["what"] = 0
-    zigzag1 = zigzag1.append([all_tmp.iloc[i]])
-    i = i-1
-    while True:
-        i = i+2
-        if i >= len(all_tmp.index): break
-        if zigzag1.iloc[len(zigzag1.index)-1][5] == 1:
-            if zigzag1.iloc[len(zigzag1.index)-1][1] * (2 - val_per) > all_tmp.iloc[i][2]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][2] * val_per < all_tmp.iloc[j+1][1]:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][2] > all_tmp.iloc[j+2][2]:
-                        i_tmp = j+2
-                    j = j+2
+        if cnt < bong_cnt or mx < mn * sub_mx_mn: continue
         else:
-            if zigzag1.iloc[len(zigzag1.index)-1][2] * val_per < all_tmp.iloc[i][1]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][1] * (2 - val_per) > all_tmp.iloc[j+1][2]:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][1] < all_tmp.iloc[j+2][1]:
-                        i_tmp = j+2
-                    j = j+2
+            for j in range(int(zz2.iloc[tmp][0]), int(zz2.iloc[lst][0])):
+                all['label'][j] = 1
 
-else:
-    zigzag1 = zigzag1.append([df.iloc[0]])
-    zigzag1["what"] = 0
-    zigzag1 = zigzag1.append([all_tmp.iloc[i]])
-    i = i-1
-    while True:
-        i = i+2
-        if i >= len(all_tmp.index): break
-        if zigzag1.iloc[len(zigzag1.index)-1][5] == 1:
-            if zigzag1.iloc[len(zigzag1.index)-1][1] * (2 - val_per) > all_tmp.iloc[i][2]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][2] * val_per < all_tmp.iloc[j+1][1]:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][2] > all_tmp.iloc[j+2][2]:
-                        i_tmp = j+2
-                    j = j+2
-        else:
-            if zigzag1.iloc[len(zigzag1.index)-1][2] * val_per < all_tmp.iloc[i][1]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][1] * (2 - val_per) > all_tmp.iloc[j+1][2]:
-                        zigzag1 = zigzag1.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][1] < all_tmp.iloc[j+2][1]:
-                        i_tmp = j+2
-                    j = j+2
+        tmp = lst + 1
 
-#고저고저
+all.to_csv("data2.csv")
 
-i = 0
-if all_tmp.iloc[0][5] == 0:
-    zigzag2 = zigzag2.append([df.iloc[0]])
-    zigzag2["what"] = 1
-    zigzag2 = zigzag2.append([all_tmp.iloc[i]])
-    i = i-1
-    while True:
-        i = i+2
-        if i >= len(all_tmp.index): break
-        if zigzag2.iloc[len(zigzag2.index)-1][5] == 1:
-            if zigzag2.iloc[len(zigzag2.index)-1][1] * (2 - val_per) > all_tmp.iloc[i][2]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][2] * val_per < all_tmp.iloc[j+1][1]:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][2] > all_tmp.iloc[j+2][2]:
-                        i_tmp = j+2
-                    j = j+2
-        else:
-            if zigzag2.iloc[len(zigzag2.index)-1][2] * val_per < all_tmp.iloc[i][1]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][1] * (2 - val_per) > all_tmp.iloc[j+1][2]:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][1] < all_tmp.iloc[j+2][1]:
-                        i_tmp = j+2
-                    j = j+2
 
-else:
-    i = i+1
-    zigzag2 = zigzag2.append([df.iloc[0]])
-    zigzag2["what"] = 1
-    zigzag2 = zigzag2.append([all_tmp.iloc[i]])
-    i = i-1
-    while True:
-        i = i+2
-        if i >= len(all_tmp.index): break
-        if zigzag2.iloc[len(zigzag2.index)-1][5] == 1:
-            if zigzag2.iloc[len(zigzag2.index)-1][1] * (2 - val_per) > all_tmp.iloc[i][2]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][2] * val_per < all_tmp.iloc[j+1][1]:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][2] > all_tmp.iloc[j+2][2]:
-                        i_tmp = j+2
-                    j = j+2
-        else:
-            if zigzag2.iloc[len(zigzag2.index)-1][2] * val_per < all_tmp.iloc[i][1]:
-                j = i
-                i_tmp = i
-                while True:
-                    if j >= len(all_tmp.index)-2:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = j
-                        break
-                    if all_tmp.iloc[i_tmp][1] * (2 - val_per) > all_tmp.iloc[j+1][2]:
-                        zigzag2 = zigzag2.append([all_tmp.iloc[i_tmp]])
-                        i = i_tmp-1
-                        break
-                    if all_tmp.iloc[i_tmp][1] < all_tmp.iloc[j+2][1]:
-                        i_tmp = j+2
-                    j = j+2
 
-print(zigzag1)
-print(zigzag2)
+

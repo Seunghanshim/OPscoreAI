@@ -77,13 +77,16 @@ def get_ohlcv(ticker="KRW-BTC", interval="day", count=200, to="2020-08-25 09:00:
 if __name__ == "__main__":
     d = dt.now()
     df = pd.DataFrame()
-    for i in range(0,119):
+    while True:
         s = d.strftime('%Y-%m-%d %H:%M:%S')
-        dft = get_ohlcv(ticker="KRW-BTC", interval="minute60", count=200, to=s)
+        print(s)
+        dft = get_ohlcv(ticker="KRW-BTC", interval="minute240", count=200, to=s)
+        if len(dft.index) == 0:
+            break
         df = df.append(dft)
         d -= td(hours=200)
         time.sleep(1)
 
     df = df.sort_index()
     df = df.groupby(level=0).first()
-    df.to_csv('data.csv')
+    df.to_csv('data.csv', index=False)

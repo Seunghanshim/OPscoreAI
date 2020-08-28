@@ -9,9 +9,9 @@ zz1.columns = ['idx', 'oz', 'hz', 'lz', 'cz', 'vz', 'wz']
 zz2.columns = ['idx2', 'oz2', 'hz2', 'lz2', 'cz2', 'vz2', 'wz2']
 
 
-label = 0 # 하락
+label = 1 # 하락
 if zz1.iloc[0][6] == 0:
-    label = 2 # 상승
+    label = 3 # 상승
 
 all['label'] = label
 cnt = 1
@@ -19,10 +19,9 @@ for i in range(1, len(all.index) - 1):
     all['label'][i] = label
     if cnt < len(zz1.index) and i == zz1.iloc[cnt][0]:
         cnt += 1
-        if label == 0: label = 2
-        else: label = 0
+        if label == 1: label = 3
+        else: label = 1
 
-# all.to_csv("data2.csv")
 
 bong_cnt = 18
 sub_mx_mn = 1.08
@@ -52,10 +51,10 @@ for i in range(0, len(zz1.index) - 2):
             continue
         else:
             for j in range(int(zz2.iloc[tmp][0]), int(zz2.iloc[lst][0])):
-                all['label'][j] = 1
+                all['label'][j] = 2
         tmp = lst + 1
 
-all.to_csv("data2.csv")
+all.to_csv("data2.csv", index=False)
 
 
 

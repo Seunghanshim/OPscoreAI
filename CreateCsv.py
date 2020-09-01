@@ -63,15 +63,46 @@ def get_ohlcv(ticker="KRW-BTC", interval="day", count=200, to="2020-08-25 09:00:
             url = "https://api.upbit.com/v1/candles/days"
 
         contents = _call_public_api(url, market=ticker, count=count, to=to)
-        dt_list = [ datetime.datetime.strptime(x['candle_date_time_kst'], "%Y-%m-%dT%H:%M:%S") for x in contents]
-        df = pd.DataFrame(contents, columns=['opening_price', 'high_price', 'low_price', 'trade_price', 'candle_acc_trade_volume'],
+        dt_list = [datetime.datetime.strptime(x['candle_date_time_kst'], "%Y-%m-%dT%H:%M:%S") for x in contents]
+        df = pd.DataFrame(contents, columns=['opening_price', 'high_price', 'low_price', 'trade_price',
+                                             'candle_acc_trade_volume'],
                           index=dt_list)
-        df = df.rename(columns={"opening_price": "open", "high_price": "high", "low_price": "low", "trade_price": "close",
-                                "candle_acc_trade_volume": "volume"})
+        df = df.rename(
+            columns={"opening_price": "open", "high_price": "high", "low_price": "low", "trade_price": "close",
+                     "candle_acc_trade_volume": "volume"})
         return df.iloc[::-1]
     except Exception as x:
         print(x.__class__.__name__)
         return None
+
+
+def getCSV(tiker='BTC'):
+    d = dt.now()
+    df = pd.DataFrame()
+    while True:
+        s = d.strftime('%Y-%m-%d %H:%M:%S')
+        print(s)
+        dft = get_ohlcv(ticker='KRW-' + tiker, interval="minute240", count=200, to=s)
+        if len(dft.index) == 0:
+            break
+        df = df.append(dft)
+        d -= td(hours=200)
+        time.sleep(1)
+
+    df = df.sort_index()
+    df = df.groupby(level=0).first()
+
+    df.to_csv('csv/' + tiker + '_ohlcv.csv', index=False)
+
+    df2 = df
+    df2['month'] = 1  # 1 ~ 12
+    for i in range(0, len(df2.index)):
+        df2['month'][i] = df2.index[i].month
+
+    df2 = df2.drop(df2.columns[[0, 1, 2, 3, 4]], axis=1)
+    df2.to_csv('csv/' + tiker + '_month.csv', index=False)
+
+    return df
 
 
 if __name__ == "__main__":
@@ -89,4 +120,11 @@ if __name__ == "__main__":
 
     df = df.sort_index()
     df = df.groupby(level=0).first()
-    df.to_csv('data.csv', index=False)
+
+    df['day'] = 1  # 1 ~ 7
+    df['month'] = 1  # 1 ~ 12
+    for i in range(0, len(df.index)):
+        df['day'][i] = df.index[i].weekday() + 1
+        df['month'][i] = df.index[i].month
+
+    df.to_csv('csv/data1.csv', index=False)

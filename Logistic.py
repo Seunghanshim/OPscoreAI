@@ -5,10 +5,11 @@ import statsmodels.api as sm
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
-df = pd.read_csv("data3.csv")
+df = pd.read_csv("csv/final.csv")
+df2 = pd.read_csv("csv/data2_7.csv")
 df = df.drop(df.index[0:39])
-df_y = df['label']
-df = df.drop(['label'], axis=1)
+df2 = df2.drop(df2.index[0:39])
+df_y = df2['label']
 df = df.drop(df.columns[0], axis=1)
 
 print(df_y)
@@ -31,3 +32,5 @@ print(result.summary())
 
 y_pred = log_reg.predict(test_x)
 print('정확도 : ', metrics.accuracy_score(test_y, y_pred))
+
+print(pd.crosstab(y_pred, test_y))

@@ -5,8 +5,8 @@ import statsmodels.api as sm
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
-df = pd.read_csv("csv/final.csv")
-df2 = pd.read_csv("csv/data2_7.csv")
+df = pd.read_csv("csv/BTC_train.csv")
+df2 = pd.read_csv("csv/BTC_label7.csv")
 df = df.drop(df.index[0:39])
 df2 = df2.drop(df2.index[0:39])
 df_y = df2['label']
@@ -31,6 +31,12 @@ result = model.fit()
 print(result.summary())
 
 y_pred = log_reg.predict(test_x)
+y_pred_pro = log_reg.predict_proba(test_x)
+
+for i in range(0, len(y_pred)):
+    if y_pred[i] == 3 and y_pred_pro[i][2] < 0.65:
+        y_pred[i] = 1
+
 print('정확도 : ', metrics.accuracy_score(test_y, y_pred))
 
 print(pd.crosstab(y_pred, test_y))
